@@ -427,12 +427,6 @@
       scroll-behavior: smooth;
     }
 
-    @media (max-width: 900px) {
-      .chat-messages {
-        padding: 16px 20px;
-      }
-    }
-
     /* ----- Message groups (user + reply paired) ----- */
     .msg-group {
       display: flex;
@@ -636,11 +630,6 @@
       flex-shrink: 0;
       background: linear-gradient(0deg, var(--bg-deepest) 60%, transparent);
     }
-    @media (max-width: 900px) {
-      .chat-input-area {
-        padding: 12px 16px 20px;
-      }
-    }
 
     .input-container {
       display: flex;
@@ -793,9 +782,6 @@
       background: linear-gradient(180deg, var(--bg-surface) 0%, transparent);
       border-bottom: 1px solid var(--border-subtle);
     }
-    @media (max-width: 900px) {
-      .image-controls { padding: 16px 20px; }
-    }
 
     .image-controls-inner {
       max-width: 640px;
@@ -903,9 +889,6 @@
       display: flex;
       align-items: center;
       justify-content: center;
-    }
-    @media (max-width: 900px) {
-      .image-result { padding: 16px 20px; }
     }
 
     .image-placeholder {
@@ -1054,26 +1037,293 @@
     }
 
     /* ============================================================
-       RESPONSIVE
+       RESPONSIVE — ChatGPT-style mobile
        ============================================================ */
 
+    /* --- Tablet / small laptop (max 900px) --- */
+    @media (max-width: 900px) {
+      .chat-messages { padding: 16px 20px; }
+      .chat-input-area { padding: 12px 16px 20px; }
+      .image-controls { padding: 16px 20px; }
+      .image-result { padding: 16px 20px; }
+    }
+
+    /* --- Phone (max 640px) --- */
     @media (max-width: 640px) {
-      .topbar { padding: 0 12px; gap: 8px; height: 50px; }
+      .topbar {
+        padding: 0 12px;
+        gap: 6px;
+        height: 50px;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: var(--bg-surface);
+      }
       .brand-text { font-size: 14px; }
       .brand-version { display: none; }
-      .model-trigger { min-width: 120px; font-size: 11.5px; padding: 5px 8px; }
-      .model-dropdown { right: auto; left: 0; min-width: 220px; }
-      .token-badge { font-size: 10.5px; padding: 4px 8px; }
+
+      /* Center tab buttons smaller */
+      .topbar-center { gap: 3px; padding: 1px; }
+      .tab-btn { padding: 5px 10px; font-size: 11.5px; }
+
+      /* Model picker: show as tiny icon button on phone */
+      .model-picker { position: relative; }
+      .model-trigger {
+        min-width: 0;
+        width: 36px;
+        height: 36px;
+        padding: 0;
+        justify-content: center;
+        font-size: 16px;
+        border-radius: var(--radius-sm);
+      }
+      .model-trigger .icon { margin: 0; }
+      .model-trigger #modelLabel,
+      .model-trigger .chevron { display: none; }
+      .model-dropdown {
+        right: auto;
+        left: 0;
+        min-width: 220px;
+        margin-top: 6px;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        top: auto;
+        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+        max-height: 60vh;
+        overflow-y: auto;
+        box-shadow: 0 -8px 40px rgba(0,0,0,0.6);
+        padding: 16px 8px;
+        margin: 0;
+        transform: translateY(100%);
+        opacity: 0;
+        transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s;
+        z-index: 200;
+      }
+      .model-dropdown.open {
+        transform: translateY(0);
+        opacity: 1;
+      }
+      /* Overlay backdrop when dropdown open on mobile */
+      .model-dropdown.open::before {
+        content: '';
+        position: fixed;
+        top: -100vh;
+        left: 0;
+        right: 0;
+        height: 100vh;
+        background: rgba(0,0,0,0.5);
+        z-index: -1;
+      }
+      .model-option { padding: 12px 12px; border-radius: var(--radius-sm); }
+
+      /* Token badge: hide text, keep dot + rotate button small */
+      .token-badge {
+        width: 36px;
+        height: 36px;
+        padding: 0;
+        justify-content: center;
+        border-radius: var(--radius-sm);
+      }
       .token-badge .label-text { display: none; }
-      .tab-btn { padding: 6px 12px; font-size: 12px; }
+      .token-badge .token-dot { width: 10px; height: 10px; margin: 0; }
 
-      .chat-messages { padding: 12px 12px; }
-      .chat-input-area { padding: 10px 12px 16px; }
-      .input-container { max-width: 100%; }
+      /* Chat messages: full-width bubbles */
+      .chat-messages {
+        padding: 8px 8px;
+      }
+      .welcome {
+        padding: 40px 16px 30px;
+      }
+      .welcome-icon {
+        width: 44px;
+        height: 44px;
+        font-size: 22px;
+      }
+      .welcome h2 { font-size: 17px; }
+      .welcome p { font-size: 13px; }
+      .welcome .shortcuts { gap: 6px; margin-top: 14px; }
+      .welcome .shortcut { font-size: 10.5px; padding: 4px 8px; }
 
-      .image-controls { padding: 14px 12px; }
-      .image-result { padding: 12px; }
-      .form-row { flex-direction: column; }
+      /* Message bubbles - ChatGPT style on mobile */
+      .msg-row {
+        max-width: 100%;
+        gap: 8px;
+      }
+      .msg-row.user {
+        max-width: 88%;
+      }
+      .msg-row.assistant {
+        max-width: 100%;
+      }
+      .msg-avatar {
+        width: 28px;
+        height: 28px;
+        font-size: 13px;
+      }
+      .msg-avatar.assistant-av {
+        display: flex;
+      }
+      .msg-bubble {
+        padding: 10px 14px;
+        font-size: 14px;
+        line-height: 1.6;
+      }
+      .msg-row.user .msg-bubble {
+        border-bottom-right-radius: 6px;
+      }
+      .msg-row.assistant .msg-bubble {
+        border-bottom-left-radius: 6px;
+      }
+      .msg-content code {
+        font-size: 12px;
+      }
+      .msg-content pre {
+        padding: 10px;
+        font-size: 12px;
+      }
+      .uploaded-media {
+        max-height: 180px;
+        border-radius: var(--radius-sm);
+      }
+
+      /* Chat input - floating bottom bar like ChatGPT */
+      .chat-input-area {
+        padding: 8px 8px calc(8px + env(safe-area-inset-bottom, 8px));
+        background: linear-gradient(0deg, var(--bg-deepest) 50%, transparent);
+        position: sticky;
+        bottom: 0;
+        z-index: 50;
+      }
+      .input-container {
+        max-width: 100%;
+        border-radius: var(--radius-lg);
+        padding: 2px;
+        box-shadow: 0 0 0 1px var(--border-default), var(--shadow-md);
+        background: var(--bg-raised);
+      }
+      .input-left .btn-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 20px;
+      }
+      .input-field {
+        padding: 10px 4px;
+        font-size: 15px;
+        min-height: 24px;
+        max-height: 100px;
+      }
+      .btn-send {
+        width: 40px;
+        height: 40px;
+        font-size: 18px;
+        border-radius: var(--radius-sm);
+      }
+
+      /* File indicator */
+      .file-indicator {
+        max-width: 100%;
+        margin: 0 4px 6px;
+        padding: 5px 10px;
+        font-size: 11px;
+      }
+
+      /* Image tab - full width on phone */
+      .image-controls {
+        padding: 14px 12px;
+      }
+      .image-controls-inner h3 { font-size: 14px; }
+      .image-controls-inner .sub { font-size: 12px; }
+
+      .form-row {
+        flex-direction: column;
+        gap: 10px;
+      }
+      .form-group textarea {
+        min-height: 60px;
+        font-size: 14px;
+      }
+      .form-group select {
+        font-size: 14px;
+        padding: 12px;
+      }
+      .btn-primary {
+        width: 100%;
+        padding: 14px 20px;
+        font-size: 15px;
+        min-height: 48px;
+      }
+      .image-result {
+        padding: 12px;
+      }
+      .image-card {
+        max-width: 100%;
+        border-radius: var(--radius-md);
+      }
+      .image-card .card-body {
+        padding: 12px;
+      }
+      .image-card .card-meta {
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+        font-size: 11px;
+        margin-bottom: 12px;
+      }
+      .image-card .card-actions {
+        gap: 6px;
+      }
+      .image-card .card-actions .btn-outline {
+        padding: 10px 12px;
+        font-size: 12px;
+        min-height: 42px;
+      }
+      .loading-state .spinner-lg {
+        width: 36px;
+        height: 36px;
+      }
+
+      /* Toast on mobile: bottom-center */
+      .toast-container {
+        top: auto;
+        bottom: 80px;
+        right: 0;
+        left: 0;
+        align-items: center;
+      }
+      .toast {
+        max-width: 90%;
+        font-size: 12.5px;
+        padding: 10px 16px;
+        border-radius: var(--radius-pill);
+        box-shadow: var(--shadow-lg);
+      }
+      @keyframes toastIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+    }
+
+    /* --- Small phone (max 400px) --- */
+    @media (max-width: 400px) {
+      .topbar { padding: 0 8px; gap: 4px; height: 46px; }
+      .topbar-center { gap: 2px; }
+      .tab-btn { padding: 4px 8px; font-size: 10.5px; }
+      .brand-text { font-size: 13px; }
+      .brand-icon { width: 24px; height: 24px; font-size: 13px; }
+
+      .chat-messages { padding: 4px 4px; }
+      .msg-row { gap: 6px; }
+      .msg-row.user { max-width: 92%; }
+      .msg-avatar { width: 24px; height: 24px; font-size: 11px; }
+      .msg-bubble { padding: 8px 12px; font-size: 13px; }
+
+      .chat-input-area { padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 6px)); }
+      .input-field { font-size: 14px; padding: 8px 4px; }
+      .input-left .btn-icon, .btn-send { width: 36px; height: 36px; font-size: 16px; }
+
+      .image-controls { padding: 10px 8px; }
+      .image-result { padding: 8px; }
     }
   </style>
 </head>
@@ -1705,6 +1955,14 @@
         state.modelOpen = !state.modelOpen;
         dom.modelDropdown.classList.toggle('open', state.modelOpen);
         dom.modelTrigger.classList.toggle('open', state.modelOpen);
+      });
+      // Close model dropdown on backdrop click (mobile bottom-sheet)
+      dom.modelDropdown.addEventListener('click', (e) => {
+        if (e.target === dom.modelDropdown) {
+          dom.modelDropdown.classList.remove('open');
+          dom.modelTrigger.classList.remove('open');
+          state.modelOpen = false;
+        }
       });
       document.addEventListener('click', () => {
         dom.modelDropdown.classList.remove('open');

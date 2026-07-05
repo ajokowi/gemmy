@@ -98,9 +98,6 @@ async function requestWithBypass(url, data, headers, timeout = 30000) {
       }
 
       const reqHeaders = { ...headers };
-      if (currentIdToken) {
-        reqHeaders['Authorization'] = `Bearer ${currentIdToken}`;
-      }
 
       return await axios.post(url, data, { headers: reqHeaders, timeout });
 
@@ -232,9 +229,6 @@ export const gemmy = {
         await signupNewToken();
         requestCount = 0;
       }
-      if (currentIdToken) {
-        reqHeaders['Authorization'] = `Bearer ${currentIdToken}`;
-      }
 
       let data = await executeStream(reqHeaders);
 
@@ -251,7 +245,7 @@ export const gemmy = {
       if (isRateLimitError(error)) {
         await signupNewToken();
         requestCount = 0;
-        const retryHeaders = { ...CONFIG.GEMINI.HEADERS, 'Authorization': `Bearer ${currentIdToken}` };
+        const retryHeaders = { ...CONFIG.GEMINI.HEADERS };
 
         const data = await executeStream(retryHeaders);
 
