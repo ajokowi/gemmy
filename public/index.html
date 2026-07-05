@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Gemmy AI Web</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #0f0f13;
+      --surface: #1a1a24;
+      --surface2: #24243a;
+      --surface3: #2e2e48;
+      --border: #3a3a5c;
+      --text: #e4e4f0;
+      --text-muted: #8888aa;
+      --accent: #7c6ff0;
+      --accent2: #a855f7;
+      --green: #22c55e;
+      --red: #ef4444;
+      --orange: #f59e0b;
+      --radius: 12px;
+      --radius-sm: 8px;
+      --shadow: 0 4px 24px rgba(0,0,0,.4);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header */
+    .header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .header-left { display: flex; align-items: center; gap: 12px; }
+    .logo { font-size: 24px; }
+    .logo-text { font-weight: 700; font-size: 20px; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .header-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+    /* Token badge */
+    .token-badge {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+    }
+    .token-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .token-dot.active { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .token-dot.inactive { background: var(--red); box-shadow: 0 0 6px var(--red); }
+
+    /* Model selector */
+    .model-select {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      cursor: pointer;
+      outline: none;
+      min-width: 180px;
+    }
+    .model-select:focus { border-color: var(--accent); }
+    .model-select option { background: var(--surface); }
+
+    /* Nav tabs */
+    .nav-tabs {
+      display: flex;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+    }
+    .nav-tab {
+      padding: 14px 24px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-muted);
+      border-bottom: 2px solid transparent;
+      transition: all .2s;
+      user-select: none;
+    }
+    .nav-tab:hover { color: var(--text); }
+    .nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    /* Main area */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .tab-content { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+    .tab-content.active { display: flex; }
+
+    /* Chat area */
+    .chat-container { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .chat-messages::-webkit-scrollbar { width: 6px; }
+    .chat-messages::-webkit-scrollbar-track { background: transparent; }
+    .chat-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    .message {
+      max-width: 80%;
+      padding: 12px 16px;
+      border-radius: var(--radius);
+      line-height: 1.6;
+      font-size: 14px;
+      animation: fadeIn .25s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    .message.user {
+      align-self: flex-end;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+    .message.assistant {
+      align-self: flex-start;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 4px;
+    }
+    .message.assistant .msg-label {
+      font-size: 11px;
+      color: var(--accent2);
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .message .msg-time {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 6px;
+      text-align: right;
+    }
+    .message .msg-content { white-space: pre-wrap; word-break: break-word; }
+    .message .msg-content p { margin-bottom: 8px; }
+    .message .msg-content p:last-child { margin-bottom: 0; }
+    .message .msg-content code {
+      background: rgba(0,0,0,.3);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+    .message .msg-content pre {
+      background: rgba(0,0,0,.3);
+      padding: 12px;
+      border-radius: var(--radius-sm);
+      overflow-x: auto;
+      margin: 8px 0;
+    }
+    .message .msg-content pre code {
+      background: none;
+      padding: 0;
+    }
+
+    .streaming-cursor::after {
+      content: '▊';
+      animation: blink 0.8s step-end infinite;
+      color: var(--accent2);
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    .message img.uploaded-media {
+      max-width: 200px;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      border: 1px solid var(--border);
+    }
+
+    /* Chat input */
+    .chat-input-area {
+      padding: 16px 24px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+    }
+    .chat-input-row { display: flex; gap: 10px; align-items: flex-end; }
+    .chat-input-wrap {
+      flex: 1;
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 4px;
+    }
+    .chat-input-wrap:focus-within { border-color: var(--accent); }
+    .chat-input-wrap textarea {
+      flex: 1;
+      background: none;
+      border: none;
+      color: var(--text);
+      padding: 10px 12px;
+      font-size: 14px;
+      font-family: inherit;
+      resize: none;
+      outline: none;
+      min-height: 20px;
+      max-height: 120px;
+      line-height: 1.4;
+    }
+    .chat-input-wrap textarea::placeholder { color: var(--text-muted); }
+
+    .btn-icon {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 8px;
+      border-radius: 8px;
+      font-size: 18px;
+      transition: all .2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .btn-icon:hover { background: var(--surface3); color: var(--text); }
+
+    .btn-send {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border: none;
+      color: white;
+      padding: 10px 20px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all .2s;
+    }
+    .btn-send:hover { opacity: .9; transform: scale(1.02); }
+    .btn-send:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+
+    .btn-secondary {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 16px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-size: 13px;
+      transition: all .2s;
+    }
+    .btn-secondary:hover { background: var(--surface3); }
+    .btn-secondary:disabled { opacity: .4; cursor: not-allowed; }
+
+    /* Image Gen tab */
+    .image-gen-container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow: hidden;
+    }
+    .image-gen-controls {
+      padding: 20px 24px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+    .image-gen-controls .form-group {
+      margin-bottom: 12px;
+    }
+    .image-gen-controls .form-group:last-child { margin-bottom: 0; }
+    .image-gen-controls label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+    .image-gen-controls textarea,
+    .image-gen-controls select {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+    }
+    .image-gen-controls textarea { resize: vertical; min-height: 60px; }
+    .image-gen-controls textarea:focus,
+    .image-gen-controls select:focus { border-color: var(--accent); }
+    .image-gen-controls select { cursor: pointer; }
+
+    .image-gen-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .btn-generate {
+      flex: 1;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border: none;
+      color: white;
+      padding: 12px 20px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 600;
+      transition: all .2s;
+    }
+    .btn-generate:hover { opacity: .9; }
+    .btn-generate:disabled { opacity: .4; cursor: not-allowed; }
+
+    .image-gen-result {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .image-placeholder {
+      text-align: center;
+      color: var(--text-muted);
+    }
+    .image-placeholder .big-icon { font-size: 64px; margin-bottom: 16px; }
+    .image-placeholder p { font-size: 14px; }
+
+    .image-result-card {
+      max-width: 600px;
+      width: 100%;
+      background: var(--surface);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+    .image-result-card img {
+      width: 100%;
+      display: block;
+    }
+    .image-result-card .image-meta {
+      padding: 16px;
+      border-top: 1px solid var(--border);
+    }
+    .image-result-card .image-meta .meta-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-muted);
+      padding: 4px 0;
+    }
+    .image-result-card .image-meta .meta-row .label { font-weight: 600; }
+
+    .image-result-card .image-actions {
+      display: flex;
+      gap: 8px;
+      padding: 0 16px 16px;
+    }
+    .btn-download {
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 13px;
+      text-align: center;
+      transition: all .2s;
+      text-decoration: none;
+    }
+    .btn-download:hover { background: var(--surface3); }
+
+    /* Loading spinner */
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Toast notifications */
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .toast {
+      padding: 12px 20px;
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      font-size: 13px;
+      animation: slideIn .3s ease;
+      max-width: 360px;
+    }
+    .toast.success { border-left: 3px solid var(--green); }
+    .toast.error { border-left: 3px solid var(--red); }
+    .toast.info { border-left: 3px solid var(--accent); }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+    /* Loading overlay for image gen */
+    .loading-overlay {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      color: var(--text-muted);
+    }
+    .loading-overlay .spinner { width: 40px; height: 40px; border-width: 3px; }
+    .loading-overlay span { font-size: 14px; }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .header { padding: 12px 16px; }
+      .nav-tabs { padding: 0 16px; }
+      .chat-messages { padding: 12px 16px; }
+      .chat-input-area { padding: 12px 16px; }
+      .message { max-width: 90%; font-size: 13px; }
+      .model-select { min-width: 140px; font-size: 12px; }
+      .image-gen-controls { padding: 16px; }
+      .image-gen-result { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <span class="logo">✨</span>
+    <span class="logo-text">Gemmy Web</span>
+  </div>
+  <div class="header-right">
+    <span class="token-badge" id="tokenBadge">
+      <span class="token-dot inactive" id="tokenDot"></span>
+      <span id="tokenLabel">Token: —</span>
+    </span>
+    <select class="model-select" id="modelSelect"></select>
+    <button class="btn-secondary" id="rotateBtn" title="Force rotate token">🔄 Rotate</button>
+  </div>
+</div>
+
+<div class="nav-tabs">
+  <div class="nav-tab active" data-tab="chat">💬 Chat</div>
+  <div class="nav-tab" data-tab="image">🎨 Generate Image</div>
+</div>
+
+<div class="main">
+  <!-- CHAT TAB -->
+  <div class="tab-content active" id="tabChat">
+    <div class="chat-container">
+      <div class="chat-messages" id="chatMessages">
+        <div class="message assistant">
+          <div class="msg-label">✨ Gemmy AI</div>
+          <div class="msg-content">Halo! Saya siap membantu kamu. Pilih model, upload gambar, atau langsung chat saja!</div>
+          <div class="msg-time" id="readyTime"></div>
+        </div>
+      </div>
+      <div class="chat-input-area">
+        <div class="chat-input-row">
+          <div class="chat-input-wrap">
+            <button class="btn-icon" id="uploadBtn" title="Upload gambar/dokumen">📎</button>
+            <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.webp,.pdf,.txt,.doc,.docx" style="display:none">
+            <textarea id="chatInput" rows="1" placeholder="Ketik pesan..." maxlength="4000"></textarea>
+          </div>
+          <button class="btn-send" id="sendBtn">Kirim</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- IMAGE GEN TAB -->
+  <div class="tab-content" id="tabImage">
+    <div class="image-gen-container">
+      <div class="image-gen-controls">
+        <div class="form-group">
+          <label for="imgPrompt">Prompt Gambar</label>
+          <textarea id="imgPrompt" placeholder="Describe the image you want to generate..."></textarea>
+        </div>
+        <div class="form-group">
+          <label for="aspectRatio">Aspect Ratio</label>
+          <select id="aspectRatio">
+            <option value="1:1">1:1 (Square)</option>
+            <option value="3:4">3:4 (Portrait)</option>
+            <option value="4:3">4:3 (Landscape)</option>
+            <option value="9:16">9:16 (Story/Reels)</option>
+            <option value="16:9">16:9 (Widescreen)</option>
+          </select>
+        </div>
+        <div class="image-gen-actions">
+          <button class="btn-generate" id="generateBtn">🎨 Generate Image</button>
+        </div>
+      </div>
+      <div class="image-gen-result" id="imageResult">
+        <div class="image-placeholder">
+          <div class="big-icon">🎨</div>
+          <p>Masukkan prompt dan klik Generate untuk membuat gambar dengan Imagen AI.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// ====== STATE ======
+let chatHistory = [];
+let isStreaming = false;
+let uploadedFile = null;
+let uploadedFileBase64 = null;
+let uploadedFileMime = null;
+
+// ====== MODELS ======
+const MODELS = [
+  'gemini-2.5-flash-lite',
+  'gemini-2.5-flash',
+  'gemini-2.5-pro',
+  'gemini-3.1-flash-lite',
+  'gemini-3.1-pro-preview',
+];
+
+// ====== DOM REFS ======
+const $ = id => document.getElementById(id);
+const modelSelect = $('modelSelect');
+const chatMessages = $('chatMessages');
+const chatInput = $('chatInput');
+const sendBtn = $('sendBtn');
+const uploadBtn = $('uploadBtn');
+const fileInput = $('fileInput');
+const generateBtn = $('generateBtn');
+const imgPrompt = $('imgPrompt');
+const aspectRatio = $('aspectRatio');
+const imageResult = $('imageResult');
+const tokenBadge = $('tokenBadge');
+const tokenDot = $('tokenDot');
+const tokenLabel = $('tokenLabel');
+const rotateBtn = $('rotateBtn');
+const toastContainer = $('toastContainer');
+
+// ====== INIT ======
+function init() {
+  // Populate model selector
+  MODELS.forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m;
+    opt.textContent = m.replace('gemini-', '').replace(/-/g, ' ');
+    modelSelect.appendChild(opt);
+  });
+  // Set default
+  modelSelect.value = 'gemini-2.5-flash-lite';
+
+  // Set ready time
+  $('readyTime').textContent = new Date().toLocaleTimeString();
+
+  // Fetch token status
+  fetchTokenStatus();
+
+  // Auto-resize textarea
+  chatInput.addEventListener('input', () => {
+    chatInput.style.height = 'auto';
+    chatInput.style.height = Math.min(chatInput.scrollHeight, 120) + 'px';
+  });
+
+  // Enter to send (Shift+Enter for newline)
+  chatInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
+  // Upload button
+  uploadBtn.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', handleFileUpload);
+
+  // Send button
+  sendBtn.addEventListener('click', sendMessage);
+
+  // Tab switching
+  document.querySelectorAll('.nav-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      $(`tab${tab.dataset.tab.charAt(0).toUpperCase() + tab.dataset.tab.slice(1)}`).classList.add('active');
+    });
+  });
+
+  // Generate image
+  generateBtn.addEventListener('click', generateImage);
+
+  // Rotate token
+  rotateBtn.addEventListener('click', rotateToken);
+}
+
+// ====== TOKEN STATUS ======
+async function fetchTokenStatus() {
+  try {
+    const res = await fetch('/api/token-status');
+    const data = await res.json();
+    updateTokenUI(data);
+  } catch (e) {
+    tokenLabel.textContent = 'Token: Error';
+    tokenDot.className = 'token-dot inactive';
+  }
+}
+
+function updateTokenUI(status) {
+  if (status.hasToken) {
+    tokenDot.className = 'token-dot active';
+    tokenLabel.textContent = `Token: ${status.tokenPrefix} (${status.requestCount}/${status.autoRotateEvery})`;
+  } else {
+    tokenDot.className = 'token-dot inactive';
+    tokenLabel.textContent = 'Token: —';
+  }
+}
+
+async function rotateToken() {
+  rotateBtn.disabled = true;
+  rotateBtn.textContent = '🔄 ...';
+  try {
+    const res = await fetch('/api/rotate-token', { method: 'POST' });
+    const data = await res.json();
+    if (data.success) {
+      showToast(`Token rotated: ${data.tokenPrefix}`, 'success');
+      fetchTokenStatus();
+    } else {
+      showToast('Token rotation failed', 'error');
+    }
+  } catch (e) {
+    showToast('Error rotating token: ' + e.message, 'error');
+  }
+  rotateBtn.disabled = false;
+  rotateBtn.innerHTML = '🔄 Rotate';
+}
+
+// ====== TOAST ======
+function showToast(msg, type = 'info') {
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = msg;
+  toastContainer.appendChild(toast);
+  setTimeout(() => toast.remove(), 3500);
+}
+
+// ====== FILE UPLOAD ======
+function handleFileUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = async (ev) => {
+    uploadedFile = file.name;
+    uploadedFileBase64 = ev.target.result.split(',')[1];
+    uploadedFileMime = file.type;
+
+    // Show in chat
+    const isImage = file.type.startsWith('image/');
+    addMessage('user', `
+<div class="msg-content">
+  ${isImage ? `<img class="uploaded-media" src="${ev.target.result}" alt="${file.name}">` : `📄 <strong>${file.name}</strong> (${(file.size/1024).toFixed(1)} KB)`}
+  <br><em>File attached. Type your message and send!</em>
+</div>
+    `);
+    showToast(`📎 ${file.name} attached`, 'info');
+  };
+  reader.readAsDataURL(file);
+  fileInput.value = '';
+}
+
+// ====== CHAT ======
+function addMessage(role, html) {
+  const div = document.createElement('div');
+  div.className = `message ${role}`;
+  div.innerHTML = html;
+  chatMessages.appendChild(div);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  return div;
+}
+
+async function sendMessage() {
+  const text = chatInput.value.trim();
+  if (!text && !uploadedFileBase64) return;
+  if (isStreaming) return;
+
+  const model = modelSelect.value;
+
+  // Show user message
+  let userHtml = `<div class="msg-content">${escapeHtml(text)}</div>`;
+  if (uploadedFile && uploadedFileBase64) {
+    const isImage = uploadedFileMime?.startsWith('image/');
+    if (isImage) {
+      userHtml = `<img class="uploaded-media" src="data:${uploadedFileMime};base64,${uploadedFileBase64}" alt="${uploadedFile}"><br>${userHtml}`;
+    } else {
+      userHtml = `📄 <strong>${uploadedFile}</strong><br>${userHtml}`;
+    }
+  }
+  addMessage('user', `<div class="msg-content">${userHtml}</div><div class="msg-time">${new Date().toLocaleTimeString()}</div>`);
+
+  chatInput.value = '';
+  chatInput.style.height = 'auto';
+
+  // Show loading assistant
+  const assistantMsg = addMessage('assistant', `
+    <div class="msg-label">✨ ${model.replace('gemini-', '').replace(/-/g, ' ')}</div>
+    <div class="msg-content streaming-cursor"></div>
+  `);
+
+  isStreaming = true;
+  sendBtn.disabled = true;
+  sendBtn.textContent = '⏳';
+
+  try {
+    if (uploadedFileBase64) {
+      // Use non-streaming chat with image via backend
+      const res = await fetch('/api/chat-with-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: text,
+          history: chatHistory,
+          imageBase64: uploadedFileBase64,
+          mimeType: uploadedFileMime,
+          model,
+        }),
+      });
+      const data = await res.json();
+      const contentEl = assistantMsg.querySelector('.msg-content');
+      if (data.success) {
+        contentEl.textContent = data.reply;
+        contentEl.classList.remove('streaming-cursor');
+        // Update history
+        chatHistory = data.history || [];
+        // Show token rotation info
+        if (data.tokenRotated) {
+          const timeEl = document.createElement('div');
+          timeEl.className = 'msg-time';
+          timeEl.textContent = new Date().toLocaleTimeString() + ' 🔄 Token auto-rotated';
+          assistantMsg.appendChild(timeEl);
+          fetchTokenStatus();
+        } else {
+          assistantMsg.querySelector('.msg-time')?.remove();
+          const timeEl = document.createElement('div');
+          timeEl.className = 'msg-time';
+          timeEl.textContent = new Date().toLocaleTimeString();
+          assistantMsg.appendChild(timeEl);
+        }
+        fetchTokenStatus();
+      } else {
+        contentEl.textContent = '❌ Error: ' + (data.msg || 'Unknown error');
+        contentEl.classList.remove('streaming-cursor');
+        if (data.tokenRotated) {
+          showToast('Token was rotated, please try again', 'info');
+          fetchTokenStatus();
+        }
+      }
+    } else {
+      // Streaming chat
+      const params = new URLSearchParams({
+        prompt: text,
+        model,
+        history: JSON.stringify(chatHistory),
+      });
+
+      // Check for rate-limited SSE endpoint
+      const eventSource = new EventSource(`/api/chat/stream?${params}`);
+      let fullText = '';
+
+      eventSource.onmessage = (ev) => {
+        try {
+          const data = JSON.parse(ev.data);
+          if (data.error) {
+            const contentEl = assistantMsg.querySelector('.msg-content');
+            contentEl.textContent = '❌ ' + data.error;
+            contentEl.classList.remove('streaming-cursor');
+            showToast('Error: ' + data.error, 'error');
+            eventSource.close();
+            return;
+          }
+          if (data.done) {
+            eventSource.close();
+            return;
+          }
+          fullText = data.fullText || data.text;
+          const contentEl = assistantMsg.querySelector('.msg-content');
+          contentEl.textContent = fullText;
+          chatMessages.scrollTop = chatMessages.scrollHeight;
+        } catch (e) {}
+      };
+
+      eventSource.addEventListener('end', () => {
+        const contentEl = assistantMsg.querySelector('.msg-content');
+        contentEl.classList.remove('streaming-cursor');
+        // Build history from what we sent
+        chatHistory.push({ role: "user", parts: [{ text }] });
+        if (fullText) {
+          chatHistory.push({ role: "model", parts: [{ text: fullText }] });
+        }
+        const timeEl = document.createElement('div');
+        timeEl.className = 'msg-time';
+        timeEl.textContent = new Date().toLocaleTimeString();
+        assistantMsg.appendChild(timeEl);
+        eventSource.close();
+        fetchTokenStatus();
+      });
+
+      eventSource.onerror = () => {
+        const contentEl = assistantMsg.querySelector('.msg-content');
+        contentEl.classList.remove('streaming-cursor');
+        if (!fullText) {
+          contentEl.textContent = '❌ Connection error. The server may have rotated the token.';
+          showToast('Stream error, token may have been rotated', 'error');
+        }
+        eventSource.close();
+        fetchTokenStatus();
+      };
+    }
+  } catch (err) {
+    const contentEl = assistantMsg.querySelector('.msg-content');
+    contentEl.textContent = '❌ Error: ' + err.message;
+    contentEl.classList.remove('streaming-cursor');
+    showToast('Chat error: ' + err.message, 'error');
+  }
+
+  // Cleanup
+  uploadedFile = null;
+  uploadedFileBase64 = null;
+  uploadedFileMime = null;
+
+  isStreaming = false;
+  sendBtn.disabled = false;
+  sendBtn.textContent = 'Kirim';
+}
+
+// ====== IMAGE GENERATION ======
+async function generateImage() {
+  const prompt = imgPrompt.value.trim();
+  if (!prompt) {
+    showToast('Masukkan prompt gambar terlebih dahulu!', 'error');
+    return;
+  }
+
+  generateBtn.disabled = true;
+  generateBtn.textContent = '⏳ Generating...';
+
+  imageResult.innerHTML = `
+    <div class="loading-overlay">
+      <div class="spinner"></div>
+      <span>🎨 Generating image dengan Imagen AI...</span>
+    </div>
+  `;
+
+  try {
+    const res = await fetch('/api/generate-image', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt,
+        options: { aspectRatio: aspectRatio.value }
+      }),
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      const sizeKB = (data.bytes / 1024).toFixed(1);
+      const safety = data.safetyAttributes || {};
+
+      imageResult.innerHTML = `
+        <div class="image-result-card">
+          <img src="${data.dataUri}" alt="${escapeHtml(prompt)}">
+          <div class="image-meta">
+            <div class="meta-row"><span class="label">Prompt:</span><span>${escapeHtml(prompt)}</span></div>
+            <div class="meta-row"><span class="label">Size:</span><span>${sizeKB} KB</span></div>
+            <div class="meta-row"><span class="label">Aspect Ratio:</span><span>${aspectRatio.value}</span></div>
+            ${safety.adulthood ? `<div class="meta-row"><span class="label">Safety (Adult):</span><span>${safety.adulthood}</span></div>` : ''}
+            ${data.tokenRotated ? `<div class="meta-row"><span class="label">Token:</span><span>🔄 Auto-rotated</span></div>` : ''}
+          </div>
+          <div class="image-actions">
+            <a class="btn-download" href="${data.dataUri}" download="gemmy-${Date.now()}.jpg">💾 Download</a>
+            <button class="btn-download" onclick="copyToClipboard('${data.dataUri.replace(/'/g, "\\'")}')">📋 Copy Base64</button>
+          </div>
+        </div>
+      `;
+      showToast('✅ Image generated successfully!', 'success');
+      fetchTokenStatus();
+    } else {
+      imageResult.innerHTML = `
+        <div class="image-placeholder">
+          <div class="big-icon">❌</div>
+          <p>Error: ${escapeHtml(data.msg || 'Failed to generate image')}</p>
+          ${data.tokenRotated ? '<p style="color:var(--orange);margin-top:8px">🔄 Token was rotated, please try again</p>' : ''}
+        </div>
+      `;
+      showToast('❌ ' + (data.msg || 'Image generation failed'), 'error');
+      fetchTokenStatus();
+    }
+  } catch (err) {
+    imageResult.innerHTML = `
+      <div class="image-placeholder">
+        <div class="big-icon">❌</div>
+        <p>Network error: ${escapeHtml(err.message)}</p>
+      </div>
+    `;
+    showToast('Error: ' + err.message, 'error');
+  }
+
+  generateBtn.disabled = false;
+  generateBtn.textContent = '🎨 Generate Image';
+}
+
+function copyToClipboard(dataUri) {
+  navigator.clipboard.writeText(dataUri.substring(0, 100) + '... [truncated]')
+    .then(() => showToast('Copied base64 prefix to clipboard', 'success'))
+    .catch(() => showToast('Failed to copy', 'error'));
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// ====== START ======
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
