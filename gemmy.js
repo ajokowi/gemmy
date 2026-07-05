@@ -270,39 +270,77 @@ export const gemmy = {
     }
   },
 
-  // Generate Image
+  // Generate Image — pakai fungsi sendiri tanpa Authorization header
+  // Firebase idToken (JWT dari signupNewUser) BUKAN Google OAuth2 token,
+  // jadi kalo dikirim ke endpoint :predict, server VertexAI nolak.
+  // Hanya pake x-goog-api-key + Firebase headers.
   generateImage: async (prompt, options = {}) => {
     try {
-      const { data } = await requestWithBypass(
-        CONFIG.IMAGEN.URL,
-        {
-          instances: [{ prompt }],
-          parameters: {
-            sampleCount: 1,
-            includeRaiReason: true,
-            includeSafetyAttributes: true,
-            aspectRatio: options.aspectRatio || "1:1",
-            safetySetting: "block_low_and_above",
-            personGeneration: "allow_adult",
-            imageOutputOptions: { mimeType: "image/jpeg", compressionQuality: 100 }
-          }
-        },
-        CONFIG.IMAGEN.HEADERS,
-        30000
-      );
+      const url = CONFIG.IMAGEN.URL;
+      const headers = { ...CONFIG.IMAGEN.HEADERS };
+      // JANGAN kirim Authorization: Bearer — Firebase idToken gak valid buat Imagen predict endpoint
+      // Hanya pake x-goog-api-key sebagai auth
 
-      if (data.predictions?.[0]?.bytesBase64Encoded) {
-        const imgBuffer = Buffer.from(data.predictions[0].bytesBase64Encoded, 'base64');
-        return {
-          success: true,
-          dataUri: `data:image/jpeg;base64,${imgBuffer.toString('base64')}`,
-          base64: imgBuffer.toString('base64'),
-          bytes: imgBuffer.length,
-          safetyAttributes: data.predictions[0].safetyAttributes,
-          tokenRotated: !!currentIdToken,
-        };
+      let lastError;
+      for (let attempt = 0; attempt < CONFIG.BYPASS.MAX_RETRIES; attempt++) {
+        try {
+          // Count request + rotate kalo perlu (tapi tanpa Authorization header)
+          requestCount++;
+          if (requestCount >= CONFIG.BYPASS.AUTO_ROTATE_EVERY && currentIdToken) {
+            await signupNewToken();
+            requestCount = 0;
+          }
+
+          const { data } = await axios.post(url, {
+            instances: [{ prompt }],
+            parameters: {
+              sampleCount: 1,
+              includeRaiReason: true,
+              includeSafetyAttributes: true,
+              aspectRatio: options.aspectRatio || "1:1",
+              safetySetting: "block_low_and_above",
+              personGeneration: "allow_adult",
+              imageOutputOptions: { mimeType: "image/jpeg", compressionQuality: 100 }
+            }
+          }, { headers, timeout: 30000 });
+
+          if (data.predictions?.[0]?.bytesBase64Encoded) {
+            const imgBuffer = Buffer.from(data.predictions[0].bytesBase64Encoded, 'base64');
+            return {
+              success: true,
+              dataUri: `data:image/jpeg;base64,${imgBuffer.toString('base64')}`,
+              base64: imgBuffer.toString('base64'),
+              bytes: imgBuffer.length,
+              safetyAttributes: data.predictions[0].safetyAttributes,
+              tokenRotated: !!currentIdToken,
+            };
+          }
+          return { success: false, msg: 'No image generated' };
+
+        } catch (error) {
+          lastError = error;
+          const status = error.response?.status;
+          const msg = (error.response?.data?.error?.message || error.message || '').toLowerCase();
+
+          // Rate limit / quota → signup baru & retry
+          if ((status === 429 || msg.includes('quota') || msg.includes('rate') || msg.includes('resource exhausted') || msg.includes('too many requests') || msg.includes('limit')) && attempt < CONFIG.BYPASS.MAX_RETRIES - 1) {
+            await signupNewToken();
+            requestCount = 0;
+            continue;
+          }
+
+          // Auth error (401) — mungkin API key expired? signup baru & retry
+          if ((status === 400 || status === 401 || status === 403) && attempt < CONFIG.BYPASS.MAX_RETRIES - 1) {
+            await signupNewToken();
+            requestCount = 0;
+            continue;
+          }
+
+          throw error;
+        }
       }
-      return { success: false, msg: 'No image generated' };
+
+      throw lastError;
 
     } catch (error) {
       return { success: false, msg: error.response?.data?.error?.message || error.message, tokenRotated: !!currentIdToken };
